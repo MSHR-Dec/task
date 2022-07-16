@@ -1,0 +1,6 @@
+# editor
+.idea
+
+# go
+go_task/.tmp/*
+!go_task/.tmp/.gitkeep
