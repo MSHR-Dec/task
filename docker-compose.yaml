@@ -1,0 +1,42 @@
+version: '3.1'
+
+services:
+  backend:
+    image: cosmtrek/air:v1.40.2
+    command: -c air.toml
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./go_task/:/task/
+    working_dir: /task
+    networks:
+      - task
+
+  mysql:
+    image: mysql:5.7
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --explicit_defaults_for_timestamp
+    ports:
+      - "53306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: task
+      MYSQL_PASSWORD: task
+      MYSQL_DATABASE: task
+      TZ: 'Asia/Tokyo'
+    volumes:
+      - mysql:/var/lib/mysql:delegated
+    networks:
+      - task
+
+  redis:
+    image: "redis:6.2.5"
+    ports:
+      - "6379:6379"
+    networks:
+      - task
+
+volumes:
+  mysql:
+
+networks:
+  task:
