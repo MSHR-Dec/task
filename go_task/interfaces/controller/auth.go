@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"github.com/MSHR-Dec/MSHR-Doc/mypkg/oops"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -22,7 +21,6 @@ func setSession(ctx *gin.Context) error {
 	}
 
 	token := uuid.NewString()
-	fmt.Println(token)
 	session.Set(SessionKey, token)
 	if err := session.Save(); err != nil {
 		return oops.InternalServerError{Message: "failed to save session"}
