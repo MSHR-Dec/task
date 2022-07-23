@@ -19,20 +19,33 @@ func NewUserRepository(gdb *gorm.DB) UserRepository {
 	}
 }
 
-func (r UserRepository) Save(user model.User) error {
+func (r UserRepository) Save(user model.User) (int, error) {
 	tx := r.gdb.Begin()
 
 	if err := tx.Create(&user).Error; err != nil {
 		tx.Rollback()
-		return oops.InternalServerError{Message: err.Error()}
+		return 0, oops.InternalServerError{Message: err.Error()}
 	}
 
 	if err := tx.Commit().Error; err != nil {
 		tx.Rollback()
-		return oops.InternalServerError{Message: err.Error()}
+		return 0, oops.InternalServerError{Message: err.Error()}
 	}
 
-	return nil
+	return int(user.ID), nil
+}
+
+func (r UserRepository) FindByID(id uint) (model.User, error) {
+	var user model.User
+	if err := r.gdb.First(&user, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return model.User{}, oops.NotFound{Message: err.Error()}
+		} else {
+			return model.User{}, oops.InternalServerError{Message: err.Error()}
+		}
+	}
+
+	return user, nil
 }
 
 func (r UserRepository) FindByName(name model.UserName) (model.User, error) {
@@ -46,4 +59,20 @@ func (r UserRepository) FindByName(name model.UserName) (model.User, error) {
 	}
 
 	return user, nil
+}
+
+func (r UserRepository) Update(user model.User) error {
+	tx := r.gdb.Begin()
+
+	if err := tx.Save(&user).Error; err != nil {
+		tx.Rollback()
+		return oops.InternalServerError{Message: err.Error()}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return oops.InternalServerError{Message: err.Error()}
+	}
+
+	return nil
 }

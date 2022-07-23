@@ -1,17 +1,21 @@
 package application
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/MSHR-Dec/MSHR-Doc/mypkg/oops"
 
+	"github.com/MSHR-Dec/task/go_task/application/dto"
 	"github.com/MSHR-Dec/task/go_task/domain/model"
 	"github.com/MSHR-Dec/task/go_task/domain/repository"
 	"github.com/MSHR-Dec/task/go_task/domain/service"
 )
 
 type UserApplication interface {
-	SignUp(input SignUpInput) error
+	SignUp(input dto.SignUpInput) (dto.SignUpOutput, error)
+	SignIn(input dto.SignInInput) (dto.SignInOutput, error)
+	EditProfile(input dto.EditProfileInput) error
 }
 
 type UserInteractor struct {
@@ -26,56 +30,81 @@ func NewUserInteractor(userRepository repository.UserRepository, userService ser
 	}
 }
 
-type SignUpInput struct {
-	Name     string `form:"name" binding:"required"`
-	Password string `form:"password" binding:"required"`
-}
-
-func (i UserInteractor) SignUp(input SignUpInput) error {
+func (i UserInteractor) SignUp(input dto.SignUpInput) (dto.SignUpOutput, error) {
 	now := time.Now()
 	user, err := model.NewUser(input.Name, input.Password, now)
 	if err != nil {
-		return err
+		return dto.SignUpOutput{}, err
 	}
 
 	ok, err := i.userService.Exist(user)
 	if ok {
-		return oops.BadRequest{Message: "already exist"}
+		return dto.SignUpOutput{}, oops.BadRequest{Message: "already exist"}
 	}
 	if err != nil {
-		return err
+		return dto.SignUpOutput{}, err
 	}
 
-	if err = i.userRepository.Save(user); err != nil {
-		return err
+	id, err := i.userRepository.Save(user)
+	if err != nil {
+		return dto.SignUpOutput{}, err
 	}
 
-	return nil
+	return dto.SignUpOutput{
+		ID: id,
+	}, nil
 }
 
-type SignInInput struct {
-	Name     string `form:"name" binding:"required"`
-	Password string `form:"password" binding:"required"`
-}
-
-type SignInOutput struct {
-	ShouldUpdatePassword bool `json:"should_update_password"`
-}
-
-func (i UserInteractor) SignIn(input SignInInput) (SignInOutput, error) {
+func (i UserInteractor) SignIn(input dto.SignInInput) (dto.SignInOutput, error) {
 	name, err := model.NewUserName(input.Name)
 	if err != nil {
-		return SignInOutput{}, err
+		return dto.SignInOutput{}, err
 	}
 
 	user, err := i.userRepository.FindByName(name)
 	if err != nil {
-		return SignInOutput{}, err
+		return dto.SignInOutput{}, err
 	}
 
 	if !user.Password.IsSame(input.Password) {
-		return SignInOutput{}, oops.BadRequest{Message: "incorrect password"}
+		return dto.SignInOutput{}, oops.BadRequest{Message: "incorrect password"}
 	}
 
-	return SignInOutput{ShouldUpdatePassword: user.ShouldUpdatePassword()}, nil
+	return dto.SignInOutput{
+		ID:                   int(user.ID),
+		ShouldUpdatePassword: user.ShouldUpdatePassword(),
+	}, nil
+}
+
+func (i UserInteractor) EditProfile(input dto.EditProfileInput) error {
+	user, err := i.userRepository.FindByID(uint(input.ID))
+	if err != nil {
+		return err
+	}
+
+	if input.Password != "" {
+		if user.Password.IsSame(input.Password) {
+			return oops.BadRequest{Message: "same password"}
+		}
+
+		password, err := model.NewPassword(input.Password)
+		if err != nil {
+			return err
+		}
+
+		user.Password = password
+	}
+
+	now := time.Now()
+	user.LastPasswordModifiedAt = now
+	user.ModifiedAt = sql.NullTime{
+		Time:  now,
+		Valid: true,
+	}
+
+	if err = i.userRepository.Update(user); err != nil {
+		return err
+	}
+
+	return nil
 }

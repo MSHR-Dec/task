@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/MSHR-Dec/MSHR-Doc/mypkg v0.0.0-20220716114156-bfc39e34767a
+	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-contrib/sessions v0.0.5
 	github.com/gin-contrib/zap v0.0.2
 	github.com/gin-gonic/gin v1.8.1

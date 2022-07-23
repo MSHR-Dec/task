@@ -7,6 +7,14 @@ import (
 	"github.com/MSHR-Dec/task/go_task/interfaces/gormrepository"
 )
 
+func injectTask() controller.TaskController {
+	conn := NewMySQLConnection(Environment)
+	taskRepo := gormrepository.NewTaskRepository(conn)
+	taskInteractor := application.NewTaskInteractor(taskRepo)
+
+	return controller.NewTaskController(taskInteractor)
+}
+
 func injectUser() controller.UserController {
 	conn := NewMySQLConnection(Environment)
 	userRepo := gormrepository.NewUserRepository(conn)

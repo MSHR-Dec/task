@@ -3,6 +3,7 @@ package adapter
 import (
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
@@ -16,6 +17,7 @@ func NewGin() *gin.Engine {
 
 	r.Use(sessions.Sessions("task", NewRedisConnection()))
 	setLogger(r)
+	setCORS(r)
 	setRoute(r)
 
 	return r
@@ -27,18 +29,53 @@ func setLogger(r *gin.Engine) {
 	r.Use(ginzap.RecoveryWithZap(logger, true))
 }
 
+func setCORS(r *gin.Engine) {
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: Environment.CorsAllowOrigins,
+		AllowMethods: []string{
+			"POST",
+			"GET",
+			"OPTIONS",
+			"PUT",
+			"DELETE",
+		},
+		AllowHeaders: []string{
+			"Origin",
+			"Access-Control-Allow-Headers",
+			"Access-Control-Expose-Headers",
+			"Access-Control-Allow-Credentials",
+			"Content-Type",
+			"Content-Length",
+			"Accept-Encoding",
+			"X-CSRF-Token",
+			"Authorization",
+		},
+		AllowCredentials: true,
+	}))
+}
+
 func setRoute(r *gin.Engine) {
-	hello := r.Group("/")
+	taskController := injectTask()
+	userController := injectUser()
+
+	r.POST("/signup", userController.SignUp)
+	r.POST("/signin", userController.SignIn)
+	r.GET("/signout", userController.SignOut)
+
+	profile := r.Group("/profile")
 	{
-		hello.Use(middleware.LoginRequired())
-		hello.GET("/", func(c *gin.Context) {
-			c.JSON(200, gin.H{"message": "Hello!"})
-		})
+		profile.Use(middleware.LoginRequired())
+		profile.PUT("", userController.EditProfile)
 	}
 
-	user := injectUser()
-
-	r.POST("/signup", user.SignUp)
-	r.POST("/signin", user.SignIn)
-	r.GET("/signout", user.SignOut)
+	user := r.Group("/users")
+	{
+		user.Use(middleware.LoginRequired())
+		task := user.Group("/:userID/tasks")
+		{
+			task.POST("", taskController.Add)
+			task.PUT("", taskController.Edit)
+			task.GET("", taskController.ListByUserID)
+		}
+	}
 }

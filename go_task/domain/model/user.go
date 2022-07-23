@@ -10,10 +10,11 @@ import (
 )
 
 type User struct {
-	ID                     uint         `gorm:"primaryKey"`
-	UUID                   UUID         `gorm:"embedded;unique;not null"`
-	Name                   UserName     `gorm:"embedded;unique;not null"`
-	Password               Password     `gorm:"embedded;not null"`
+	ID                     uint     `gorm:"primaryKey"`
+	UUID                   UUID     `gorm:"embedded;unique;not null"`
+	Name                   UserName `gorm:"embedded;unique;not null"`
+	Password               Password `gorm:"embedded;not null"`
+	Tasks                  []Task
 	LastPasswordModifiedAt time.Time    `gorm:"not null"`
 	CreatedAt              time.Time    `gorm:"not null"`
 	ModifiedAt             sql.NullTime `gorm:"default:NULL"`
