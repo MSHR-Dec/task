@@ -1,6 +1,19 @@
 version: '3.1'
 
 services:
+  frontend:
+    image: node:18.6.0-buster-slim
+    command: sh -c "npm run dev"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./next_task:/task/
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    working_dir: /task
+    networks:
+      - task
+
   backend:
     image: cosmtrek/air:v1.40.2
     command: -c air.toml
