@@ -31,7 +31,7 @@ const Top: NextPage = () => {
                         "password": event.target.password.value,
                     }
                 ),
-                credentials: "same-origin",
+                credentials: "include",
             }
         )
         const body = await res.json()
